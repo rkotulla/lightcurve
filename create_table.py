@@ -6,6 +6,41 @@ import sys
 import sqlite3
 
 
+
+def read_colunms_from_param_file(sex_param_fn):
+
+    #
+    # Read the parameter file to get
+    #
+    parameters = []
+    with open(sex_param_fn, "r") as pf:
+        paramfile = pf.readlines()
+
+        for _line in paramfile:
+            line = _line.strip()
+            if (line.startswith("#") or len(line) <= 0):
+                continue
+
+            keyname = line.split(" ")[0].split("(")[0]
+            print keyname
+
+            if (keyname in [
+                'MAG_APER', 'MAGERR_APER',
+                'FLUX_APER', 'FLUXERR_APER',
+                'FLUX_RADIUS'
+            ]):
+                # this is one of the repeating entries
+                n_repeat = int(line.split("(")[1].split(")")[0])
+                keys2add = ["%s_%d" % (keyname, i+1) for i in range(
+                    n_repeat)]
+                print keys2add
+
+            else:
+                keys2add = [keyname]
+            parameters.extend(keys2add)
+
+    return parameters
+
 if __name__ == "__main__":
 
 
@@ -60,7 +95,8 @@ if __name__ == "__main__":
     columns = ",\n".join(columns_and_format)
     sql = '''
 CREATE TABLE photometry (
-photid INT AUTO_INCREMENT NOT NULL,
+photid INT AUTO_INCREMENT,
+frameid INT NOT NULL,
 %s,
 PRIMARY KEY (photid)
 );
@@ -75,11 +111,11 @@ PRIMARY KEY (photid)
     #
     sql = '''
 CREATE TABLE frames (
-id       INT AUTO_INCREMENT NOT NULL,
+frameid  INT AUTO_INCREMENT,
 mjd      FLOAT NOT NULL,
 dateobs  TIMESTAMP,
 filename VARCHAR NOT NULL,
-PRIMARY KEY (id)
+PRIMARY KEY (frameid)
 );
 '''
     curs.execute(sql)
