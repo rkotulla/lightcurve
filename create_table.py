@@ -51,13 +51,39 @@ if __name__ == "__main__":
                 keys2add = [keyname]
             parameters.extend(keys2add)
 
-    print parameters
+    # print parameters
 
     conn = sqlite3.connect(table_fn)
     curs = conn.cursor()
 
-    columns = ",".join(parameters)
-    curs.execute('''CREATE TABLE photometry (%s)''' % (columns))
+    columns_and_format = ['%s FLOAT' % (p.lower()) for p in parameters]
+    columns = ",\n".join(columns_and_format)
+    sql = '''
+CREATE TABLE photometry (
+photid INT AUTO_INCREMENT NOT NULL,
+%s,
+PRIMARY KEY (photid)
+);
+''' % (columns)
+    print sql
+    curs.execute(sql)
     conn.commit()
+
+
+    #
+    # also create a table to hold what frames are already in the database
+    #
+    sql = '''
+CREATE TABLE frames (
+id       INT AUTO_INCREMENT NOT NULL,
+mjd      FLOAT NOT NULL,
+dateobs  TIMESTAMP,
+filename VARCHAR NOT NULL,
+PRIMARY KEY (id)
+);
+'''
+    curs.execute(sql)
+    conn.commit()
+
     conn.close()
 
