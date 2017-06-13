@@ -10,11 +10,37 @@ import sqlite3
 
 from create_table import read_colunms_from_param_file
 
+
+def ingest_frame(fn, db_cursor):
+
+    hdulist = pyfits.open(fn)
+
+    #
+    # extract data and assemble SQL insert command
+    #
+    sql = """
+    INSERT INTO frames (
+      filename,
+      mjd,
+      dateobs,
+      skylevel,
+      filter,
+      exptime,
+      object,
+      airmass,
+      wcs_rms,
+      seeing,
+
+    ) VALUES (
+
+    )"""
+
+
 if __name__ == "__main__":
 
-    sex_conf_fn = sys.argv[1]
-    sex_param_fn = sys.argv[2]
-    database_fn = sys.argv[3]
+    database_fn = sys.argv[1]
+    sex_conf_fn = sys.argv[2]
+    sex_param_fn = sys.argv[3]
     filelist = sys.argv[4:]
 
     params = read_colunms_from_param_file(sex_param_fn)
@@ -30,6 +56,7 @@ if __name__ == "__main__":
             cmd = "sex -c %s -PARAMETERS_NAME %s -CATALOG_NAME %s %s" % (
                 sex_conf_fn, sex_param_fn, catalog_fn, fn
             )
+            print cmd
             os.system(cmd)
 
         # read catalog data
@@ -48,7 +75,7 @@ if __name__ == "__main__":
         #
         # Now ingest all source photometry
         #
-        sqllog = open("sql.log", "w")
+        sqllog = open(fn[:-5]+".sql", "w")
         print "begin transaction"
         #sql = 'BEGIN TRANSACTION;'
         #curs.execute(sql)
@@ -63,7 +90,7 @@ if __name__ == "__main__":
                 ",".join(["%f" % x for x in source])
             )
             curs.execute(sql.strip())
-            print sql
+            #print sql
             print >>sqllog, sql.strip()
 
         #sql = 'COMMIT;'
