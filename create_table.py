@@ -95,10 +95,9 @@ if __name__ == "__main__":
     columns = ",\n".join(columns_and_format)
     sql = '''
 CREATE TABLE photometry (
-photid INT AUTO_INCREMENT,
+photid INTEGER PRIMARY KEY,
 frameid INT NOT NULL,
-%s,
-PRIMARY KEY (photid)
+%s
 );
 ''' % (columns)
     print sql
@@ -111,12 +110,19 @@ PRIMARY KEY (photid)
     #
     sql = '''
 CREATE TABLE frames (
-frameid  INT AUTO_INCREMENT,
+frameid  INTEGER PRIMARY KEY,
+filename VARCHAR NOT NULL,
 mjd      FLOAT NOT NULL,
 dateobs  TIMESTAMP,
-filename VARCHAR NOT NULL,
-PRIMARY KEY (frameid)
-);
+skylevel FLOAT,
+filter   VARCHAR,
+exptime  FLOAT,
+object   VARCHAR,
+airmass  FLOAT,
+wcs_rms  FLOAT,
+seeing   FLOAT,
+magzero  FLOAT,
+magzero_err FLOAT);
 '''
     curs.execute(sql)
     conn.commit()
