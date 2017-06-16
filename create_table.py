@@ -96,7 +96,8 @@ if __name__ == "__main__":
     sql = '''
 CREATE TABLE photometry (
 photid INTEGER PRIMARY KEY,
-frameid INT NOT NULL,
+frameid INTEGER NOT NULL,
+sourceid INTEGER,
 %s
 );
 ''' % (columns)
@@ -126,6 +127,20 @@ magzero_err FLOAT);
 '''
     curs.execute(sql)
     conn.commit()
+
+    #
+    # create a table with unique source IDs
+    #
+    sql = '''
+CREATE TABLE sources (
+sourceid  INTEGER PRIMARY KEY,
+ra        FLOAT,
+dec       FLOAT
+);
+'''
+    curs.execute(sql)
+    conn.commit()
+
 
     conn.close()
 
