@@ -4,7 +4,7 @@ import os
 import sys
 
 import sqlite3
-
+import argparse
 
 
 def read_colunms_from_param_file(sex_param_fn):
@@ -43,24 +43,38 @@ def read_colunms_from_param_file(sex_param_fn):
 
 if __name__ == "__main__":
 
+    #
+    # Handle all command line stuff
+    #
+    parser = argparse.ArgumentParser(
+        description='Create light-curve database for a given SExtractor configuration.')
+    parser.add_argument(
+        'database_fn', type=str, #nargs=1,
+        metavar='data.base',
+        help='database filename')
+    parser.add_argument(
+        'sex_conf_fn', metavar='sex.conf', type=str, #nargs=1,
+        help='SExtractor configuration file')
+    parser.add_argument(
+        'sex_param_fn', metavar='sex.param', type=str, #nargs=1,
+        help='SExtractor parameter filename')
+    args = parser.parse_args()
 
-    table_fn = sys.argv[1]
-
-    sex_conf_fn = sys.argv[2]
-    sex_param_fn = sys.argv[3]
-
-    if (os.path.isfile(table_fn)):
-        os.remove(table_fn)
+    #
+    # Make sure we start with a fresh database
+    #
+    if (os.path.isfile(args.database_fn)):
+        os.remove(args.database_fn)
         print("Table file (%s) already exists, either delete or choose "
-              "different file" % (table_fn))
-        #sys.exit(0)
+              "different file" % (args.database_fn))
+        sys.exit(0)
 
 
     #
     # Read the parameter file to get
     #
     parameters = []
-    with open(sex_param_fn, "r") as pf:
+    with open(args.sex_param_fn, "r") as pf:
         paramfile = pf.readlines()
 
         for _line in paramfile:
@@ -88,7 +102,7 @@ if __name__ == "__main__":
 
     # print parameters
 
-    conn = sqlite3.connect(table_fn)
+    conn = sqlite3.connect(args.database_fn)
     curs = conn.cursor()
 
     columns_and_format = ['%s FLOAT' % (p.lower()) for p in parameters]

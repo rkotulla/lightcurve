@@ -8,18 +8,29 @@ import numpy
 import subprocess
 import sqlite3
 import time
-
+import argparse
 
 
 if __name__ == "__main__":
 
-    db_file = sys.argv[1]
+    #
+    # Handle all command line stuff
+    #
+    parser = argparse.ArgumentParser(
+        description='Create light-curve database for a given SExtractor configuration.')
+    parser.add_argument(
+        'database_fn', type=str, #nargs=1,
+        metavar='data.base',
+        help='database filename')
+    parser.add_argument(
+        'matching_radius', metavar='matching.radius', type=float,
+        help='Matching radius in arcsec')
+    args = parser.parse_args()
 
-    matching_radius = float(sys.argv[2])
-    matching_radius_deg = matching_radius / 3600.
+    matching_radius_deg = args.matching_radius / 3600.
 
 
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(args.database_fn)
     curs = conn.cursor()
     #curs.arraysize = 250
 
