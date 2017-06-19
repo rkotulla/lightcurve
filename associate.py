@@ -7,6 +7,7 @@ import numpy
 
 import subprocess
 import sqlite3
+import time
 
 
 
@@ -20,19 +21,34 @@ if __name__ == "__main__":
 
     conn = sqlite3.connect(db_file)
     curs = conn.cursor()
+    #curs.arraysize = 250
+
+    # create index
+    print "creating index"
+    sql = "CREATE INDEX coords ON photometry (alpha_j2000, delta_j2000)"
+    try:
+        curs.execute(sql)
+    except sqlite3.OperationalError:
+        pass
+    print "done with index"
 
     while (True):
 
         #
         # Find un-associated source
         #
+        times = []
+
+        times.append(time.time())
         sql = """\
         SELECT alpha_j2000, delta_j2000
         FROM PHOTOMETRY
-        WHERE sourceid IS NULL"""
+        WHERE sourceid IS NULL
+        LIMIT 1"""
         query = curs.execute(sql)
 
         result = query.fetchone()
+        times.append(time.time())
         # print result
         ra,dec = result
         # print ra,dec
@@ -46,17 +62,19 @@ if __name__ == "__main__":
         SELECT alpha_j2000, delta_j2000, photid
         FROM photometry
         WHERE sourceid IS NULL
-        AND delta_j2000 > %(mindec)f
-        AND delta_j2000 < %(maxdec)f
-        AND alpha_j2000 > %(minra)f
-        AND alpha_j2000 < %(maxra)f
+        AND alpha_j2000 BETWEEN %(minra)f AND %(maxra)f
+        AND delta_j2000 BETWEEN %(mindec)f AND %(maxdec)f
         """ % {
             'minra': ra-d_ra, 'maxra': ra+d_ra,
             'mindec': dec-matching_radius_deg,
             'maxdec': dec+matching_radius_deg
         }
+            #sourceid IS NULL       AND
+        #        AND alpha_j2000 BETWEEN %(minra)f AND %(maxra)f
         associated_query = curs.execute(associated_sql)
-        matches = associated_query.fetchall()
+        times.append(time.time())
+        matches = associated_query.fetchmany(100) #all()
+        times.append(time.time())
         # print matches
 
         matches = numpy.array(matches)
@@ -78,14 +96,17 @@ if __name__ == "__main__":
         #
         # create new entry in the source table
         #
+        times.append(time.time())
         new_sourceid_sql = "INSERT INTO sources (ra, dec) VALUES (?,?)"
         curs.execute(new_sourceid_sql, (mean_pos[0], mean_pos[1]))
+        times.append(time.time())
 
         get_sourceid_sql = "SELECT sourceid FROM sources WHERE ra=? and dec=?"
         query = curs.execute(get_sourceid_sql, (mean_pos[0], mean_pos[1]))
         _source_id = query.fetchone()
         source_id = _source_id[0]
         # print source_id
+        times.append(time.time())
 
         print "Found %3d sources at %8.5f %+8.5f +/- %5.3f %5.3f ==> %5d" % (
             valid_photid.shape[0], mean_pos[0], mean_pos[1],
@@ -103,9 +124,14 @@ if __name__ == "__main__":
             SET sourceid = ?
             WHERE photid=?;"""
             curs.execute(sql, (source_id, photid))
+        times.append(time.time())
 
         # break
         conn.commit()
+        times.append(time.time())
+
+        all_times = numpy.array(times)
+        numpy.savetxt(sys.stdout, numpy.diff(all_times).reshape((1,-1)), fmt="%.3f")
 
     conn.close()
 
