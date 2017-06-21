@@ -22,7 +22,7 @@ def read_colunms_from_param_file(sex_param_fn):
                 continue
 
             keyname = line.split(" ")[0].split("(")[0]
-            print keyname
+            #print keyname
 
             if (keyname in [
                 'MAG_APER', 'MAGERR_APER',
@@ -33,7 +33,7 @@ def read_colunms_from_param_file(sex_param_fn):
                 n_repeat = int(line.split("(")[1].split(")")[0])
                 keys2add = ["%s_%d" % (keyname, i+1) for i in range(
                     n_repeat)]
-                print keys2add
+                #print keys2add
 
             else:
                 keys2add = [keyname]
