@@ -83,9 +83,12 @@ def get_lightcurve(
     lc_query = curs.execute(sql)
     results = numpy.array(lc_query.fetchmany(size=n_max_points))
 
+    if (results.shape[0] <= 0):
+        return None
+
     if (calibrate):
         magzero = results[:,1]
-        for idx, c in enumerate(columns):
+        for idx, c in enumerate(sextractor_columns):
             if (c.startswith("MAG") and not c.startswith("MAGERR")):
                 results[:, idx+len(column_list_x)] += magzero
 
