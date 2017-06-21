@@ -149,7 +149,10 @@ magzero_err FLOAT);
 CREATE TABLE sources (
 sourceid  INTEGER PRIMARY KEY,
 ra        FLOAT,
-dec       FLOAT
+dec       FLOAT,
+rms_ra    FLOAT,
+rms_dec   FLOAT,
+nphot     INTEGER
 );
 '''
     curs.execute(sql)

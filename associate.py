@@ -101,15 +101,16 @@ if __name__ == "__main__":
         # print valid_photid
         mean_pos = numpy.mean(matches[valid][:, 0:2], axis=0)
         # print mean_pos
-        pos_std  = numpy.std(matches[valid][:, 0:2], axis=0) * [cos_dec, 1.0]
+        pos_std  = numpy.std(matches[valid][:, 0:2], axis=0) * [cos_dec, 1.0] * 3600.
         # print pos_std * 3600
 
         #
         # create new entry in the source table
         #
         times.append(time.time())
-        new_sourceid_sql = "INSERT INTO sources (ra, dec) VALUES (?,?)"
-        curs.execute(new_sourceid_sql, (mean_pos[0], mean_pos[1]))
+        new_sourceid_sql = "INSERT INTO sources (ra, dec, rms_ra, rms_dec, nphot) VALUES (?,?,?,?,?)"
+        curs.execute(new_sourceid_sql, (
+            mean_pos[0], mean_pos[1], pos_std[0], pos_std[1], valid_photid.shape[0]))
         times.append(time.time())
 
         get_sourceid_sql = "SELECT sourceid FROM sources WHERE ra=? and dec=?"
@@ -121,7 +122,7 @@ if __name__ == "__main__":
 
         print "Found %3d sources at %8.5f %+8.5f +/- %5.3f %5.3f ==> %5d" % (
             valid_photid.shape[0], mean_pos[0], mean_pos[1],
-            pos_std[0]*3600, pos_std[1]*3600,
+            pos_std[0], pos_std[1],
             source_id
         )
 
@@ -142,7 +143,7 @@ if __name__ == "__main__":
         times.append(time.time())
 
         all_times = numpy.array(times)
-        numpy.savetxt(sys.stdout, numpy.diff(all_times).reshape((1,-1)), fmt="%.3f")
+        #numpy.savetxt(sys.stdout, numpy.diff(all_times).reshape((1,-1)), fmt="%.3f")
 
     conn.close()
 
