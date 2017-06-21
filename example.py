@@ -21,14 +21,29 @@ if __name__ == "__main__":
     database_file = sys.argv[1]
     sex_param_file = sys.argv[2]
 
+    min_nphot = int(sys.argv[3])
+    
+    start_at = int(sys.argv[4])
+    end_at = int(sys.argv[5])
+
     #print database_file, sex_param_file
 
 
     columns = read_colunms_from_param_file(sex_param_file)
     db = sqlite3.connect(database_file)
+    
+    #
+    #
+    #
+    sql = "SELECT sourceid FROM sources WHERE nphot >= %d LIMIT %d" % (
+        min_nphot, end_at)
+    cursor = db.cursor()
+    query = cursor.execute(sql)
+    results = numpy.array(query.fetchmany(size=end_at))
+
     print "all ready to go"
 
-    for sourceid in range(1,20):
+    for sourceid in results[start_at:end_at+1]:
 
         result = get_lightcurve(
             database=db,
