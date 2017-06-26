@@ -84,7 +84,7 @@ if __name__ == "__main__":
         #        AND alpha_j2000 BETWEEN %(minra)f AND %(maxra)f
         associated_query = curs.execute(associated_sql)
         times.append(time.time())
-        matches = associated_query.fetchmany(100) #all()
+        matches = associated_query.fetchmany(1000) #all()
         times.append(time.time())
         # print matches
 
