@@ -44,7 +44,7 @@ def ingest_frame(db_connection,
         airmass, wcs_rms, seeing, magzero, magzero_err
     )
 
-    print sql
+    # print sql
     curs = db_connection.cursor()
     curs.execute(sql)
     db_connection.commit()
@@ -104,6 +104,10 @@ if __name__ == "__main__":
                         default='PHOTZP_X', help='FITS keyword for photometric zeropoint')
     parser.add_argument('--errmagzero', dest='errmagzero',
                         default='PHOTZPSD', help='FITS keyword for photometric zeropoint uncertainty')
+
+    parser.add_argument('--weight', dest='weight',
+                        default=None, help='weight map or flat-field')
+
     args = parser.parse_args()
 
     #
@@ -164,7 +168,7 @@ if __name__ == "__main__":
         # Now ingest all source photometry
         #
         sqllog = open(fn[:-5]+".sql", "w")
-        print "begin transaction"
+        # print "begin transaction"
         #sql = 'BEGIN TRANSACTION;'
         #curs.execute(sql)
         #print >>sqllog, sql
