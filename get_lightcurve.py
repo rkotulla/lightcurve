@@ -20,6 +20,9 @@ def get_lightcurve(
         calibrate=True,
         sextractor_columns=None,
         n_max_points = 1000,
+        use_differential_photometry=False,
+        diffphot_radius=1.5,
+        diffphot_number=5,
 ):
 
     curs = database.cursor()
@@ -92,7 +95,31 @@ def get_lightcurve(
             if (c.startswith("MAG") and not c.startswith("MAGERR")):
                 results[:, idx+len(column_list_x)] += magzero
 
-    return results, sql, column_list
+    differential_photometry_correction = None
+    if (use_differential_photometry):
+        #
+        # get coordinates from source-id
+        #
+
+        #
+        # select nearby sources from their source-ids
+        #
+
+        #
+        # compute distances and decide what source-ids to use as reference
+        #
+
+        #
+        # query the light-curves for these sources
+        #
+
+        #
+        # calculate the reference star correction
+        #
+
+
+    return results, sql, column_list, differential_photometry_correction
+
 
 
 
@@ -122,6 +149,18 @@ if __name__ == "__main__":
                         default=1000, help='maximum number of observations')
     parser.add_argument('--out', dest='output', type=str,
                         default=None, help='output file')
+
+    parser.add_argument('--diffphot', dest='use_diff_phot',
+                        default=False, action='store_true',
+                        help='use differential photometry')
+    parser.add_argument('--diffr', dest='diff_phot_radius',
+                        type=float, default=1.,
+                        help='radius (in arcmin) to select '
+                             'differential photometry reference stars')
+    parser.add_argument('--diffn', dest='diff_phot_n', type=int,
+                        default=5, help='number of reference stars for '
+                                        'differential photometry')
+
     args = parser.parse_args()
 
 
@@ -140,12 +179,15 @@ if __name__ == "__main__":
         sextractor_columns=columns,
         calibrate=True,
         n_max_points=args.n_max_points,
+        use_differential_photometry=args.use_diff_phot,
+        diffphot_radius=args.diff_phot_radius,
+        diffphot_number=args.diff_phot_n,
     )
     if (result is None):
         print "nothing found"
         sys.exit(0)
 
-    lightcurve, sqlquery, query_columns = result
+    lightcurve, sqlquery, query_columns, diffphotcorr = result
 
     # print lightcurve
 
