@@ -67,7 +67,8 @@ def get_lightcurve(
     #     where_clause = "sources.sourceid = %d" % (sourceid)
     # elif (ra is not None and dec is not None and match_radius is not None):
 
-    column_list_x = ['frames.mjd', 'frames.magzero', 'frames.magzero_err']
+    column_list_x = ['frames.mjd', 'frames.magzero', 'frames.magzero_err',
+                     'frames.frameid']
     column_list_phot = ["photometry.%s" % (c.lower()) for c in sextractor_columns]
     column_list = column_list_x + column_list_phot
     # print column_list
@@ -97,25 +98,116 @@ def get_lightcurve(
 
     differential_photometry_correction = None
     if (use_differential_photometry):
+
+        # find the column numbers for all magnitude columns
+        mag_columns = []
+        for i,n in enumerate(column_list):
+            # print n
+            if (n.startswith("photometry.mag_")):
+                mag_columns.append(i)
+
         #
         # get coordinates from source-id
         #
+        sql = "SELECT ra,dec FROM sources WHERE sourceid = %d" % (sourceid)
+        query = curs.execute(sql)
+        ra_dec =  query.fetchone()
+        print "#", ra_dec
+        ra, dec = ra_dec
+        print "#", ra, dec
+
 
         #
         # select nearby sources from their source-ids
         #
+        dec_min, dec_max = dec-diffphot_radius/60, dec+diffphot_radius/60
+        cos_dec = numpy.cos(numpy.radians(dec))
+        ra_min = ra - diffphot_radius/60/cos_dec
+        ra_max = ra + diffphot_radius/60/cos_dec
+
+        sql = """SELECT sourceid,ra,dec FROM sources WHERE
+              ra>%f and ra<%f and dec>%f and dec<%f""" % (
+                ra_min, ra_max, dec_min, dec_max)
+        # print sql
+        query = curs.execute(sql)
+        ref_star_candidates = numpy.array(query.fetchmany(size=5000))
+        print "#", ref_star_candidates.shape
 
         #
         # compute distances and decide what source-ids to use as reference
         #
+        distance = numpy.hypot(
+            ref_star_candidates[:,2]-dec,
+            (ref_star_candidates[:,1]-ra)*cos_dec
+        )
+        si = numpy.argsort(distance)
+        ref_star_sorted = ref_star_candidates[si]
+        ref_stars = ref_star_sorted[:diffphot_number]
+        print "#", ref_stars
+        ref_star_sourceids = ref_stars[:,0].astype(numpy.int)
 
         #
         # query the light-curves for these sources
         #
+        all_corrections = []
+        source_mags = results[:, mag_columns]
+        for ref_source_id in ref_star_sourceids:
+            print "# getting lightcurve for reference source %d" % (ref_source_id)
+            res = get_lightcurve(
+                database,
+                sourceid=ref_source_id,
+                ra=None, dec=None, match_radius=1.,
+                calibrate=True,
+                sextractor_columns=sextractor_columns,
+                n_max_points = n_max_points,
+                use_differential_photometry=False,
+            )
+
+            ref_lightcurve, _, _, _ = res
+            numpy.savetxt("ref_lightcurve.%d" % (ref_source_id), ref_lightcurve)
+
+            # Now match the reference lightcurve, frame-by-frame to the actual
+            # lightcurve
+            matched_lightcurve = numpy.empty((results.shape[0], len(mag_columns)))
+            matched_lightcurve[:,:] = numpy.NaN
+
+            # print "matched LC", matched_lightcurve.shape
+            for iframe, frameid in enumerate(results[:,3]):
+                #sys.stdout.write("%d " % (frameid))
+                #sys.stdout.flush()
+                # print "checking for %d in %s" % (frameid, str(ref_lightcurve[:,3]))
+                _framematch = (ref_lightcurve[:,3] == frameid)
+                if (numpy.sum(_framematch) != 1):
+                    # either no match or too many matches, either way
+                    # skip this value and move on
+                    # print "couldn't find value"
+                    continue
+
+                matched_lightcurve[iframe, :] = ref_lightcurve[_framematch, mag_columns]
+            numpy.savetxt("matched_lc.%d" % (ref_source_id), matched_lightcurve)
+            all_corrections.append(matched_lightcurve)
+
+                #print _framematch, frameid, ref_lightcurve[_framematch,3
 
         #
         # calculate the reference star correction
         #
+        all_corrections = numpy.array(all_corrections)
+        print "#", all_corrections.shape
+
+        diffphot = all_corrections - source_mags
+
+        median_flux_correction = numpy.nanmedian(diffphot, axis=1)
+        print "#", median_flux_correction.shape
+
+        diffphot -= median_flux_correction.reshape((median_flux_correction.shape[0], 1, median_flux_correction.shape[1]))
+        print "#", diffphot.shape
+
+        # now combine all measurements
+        final_correction = numpy.median(diffphot, axis=0)
+        print "#", final_correction.shape
+
+        differential_photometry_correction = final_correction
 
 
     return results, sql, column_list, differential_photometry_correction
@@ -188,6 +280,9 @@ if __name__ == "__main__":
         sys.exit(0)
 
     lightcurve, sqlquery, query_columns, diffphotcorr = result
+
+    if (diffphotcorr is not None):
+        lightcurve = numpy.append(lightcurve, diffphotcorr, axis=1)
 
     # print lightcurve
 
