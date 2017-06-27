@@ -25,6 +25,10 @@ if __name__ == "__main__":
     parser.add_argument(
         'matching_radius', metavar='matching.radius', type=float,
         help='Matching radius in arcsec')
+
+    parser.add_argument('--noclean', dest='clean', action="store_false",
+                        default=True, help='clean duplicates in frame')
+
     args = parser.parse_args()
 
     matching_radius_deg = args.matching_radius / 3600.
@@ -43,7 +47,9 @@ if __name__ == "__main__":
         pass
     print "done with index"
 
+    counter=0
     while (True):
+        counter += 1
 
         #
         # Find un-associated source
@@ -70,7 +76,7 @@ if __name__ == "__main__":
         cos_dec = numpy.cos(numpy.radians(dec))
         d_ra = matching_radius_deg / cos_dec
         associated_sql = """\
-        SELECT alpha_j2000, delta_j2000, photid, frameid,
+        SELECT alpha_j2000, delta_j2000, photid, frameid
         FROM photometry
         WHERE sourceid IS NULL
         AND alpha_j2000 BETWEEN %(minra)f AND %(maxra)f
@@ -96,31 +102,50 @@ if __name__ == "__main__":
                              (matches[:,1]-dec)
                              )
         valid = fine_d < matching_radius_deg
-        valid_photid = matches[:,2][valid].astype(numpy.int)
 
         #
         # Now make sure we only have a single source per frame
         #
         valid_matches = numpy.append(
             matches[valid],
-            fine_d[valid].reshape((-1,1)),
+            fine_d[valid].reshape((-1,1))*3600.,
             axis=1)
         unique_frameids = set(valid_matches[:,3])
-        if (len(unique_frameids) == valid_matches.shape[0]):
+        if (len(unique_frameids) == valid_matches.shape[0] or not args.clean):
             # nothing to do, all frame-ids are unique
             pass
         else:
             # at least some of the matches are duplicate matches with two
             # counterparts from a single frame
+            # print "duplicate counter: %d" % (counter)
+
+            # numpy.savetxt("validmatches_before.%d" % (counter),
+            # valid_matches)
             for u_frameid in unique_frameids:
                 from_this_frame = (valid_matches[:,3] == u_frameid)
                 this_frame = valid_matches[from_this_frame]
-                if (numpy.sum(from_this_frame) > 1):
-                    # this frame has duplicate identifications
-                    # find the closest match
-                    min_d = numpy.min(this_frame[:,4])
-                    # and mark all other solutions as invalid
-                    this_frame[:,4][this_frame[:,4] > min_d] = numpy.NaN
+                if (numpy.sum(from_this_frame) <= 1):
+                    # no duplicates here, so move on
+                    continue
+
+                # print "#valid matches before: %d" % (valid_matches.shape[0])
+                # print "duplicates found: %d: %s" % (
+                #     numpy.sum(from_this_frame), str(this_frame[:,4]))
+
+                # this frame has duplicate identifications
+                # find the closest match
+                min_d = numpy.min(this_frame[:,4])
+                # print "closest match: %f" % (min_d)
+
+                # and mark all other solutions as invalid
+                duplicate = (valid_matches[:,3] == u_frameid) & \
+                            (valid_matches[:,4] > min_d)
+                # print "duplicates: %s --> #=%d" % (
+                #     str(this_frame[duplicate][:,4]), numpy.sum(duplicate))
+                valid_matches[duplicate, 4] = numpy.NaN
+
+            # numpy.savetxt("validmatches_between.%d" % (counter),
+            # valid_matches)
 
             # now eliminate all matches with distance marked as invalid (set
             #  to NaN)
@@ -130,11 +155,14 @@ if __name__ == "__main__":
                 n_before-valid_matches.shape[0], n_before,
                 valid_matches.shape[0])
 
+            # numpy.savetxt("validmatches_after.%d" % (counter), valid_matches)
+
         # print valid_photid
-        mean_pos = numpy.mean(matches[valid][:, 0:2], axis=0)
+        mean_pos = numpy.mean(valid_matches[:, 0:2], axis=0)
         # print mean_pos
-        pos_std  = numpy.std(matches[valid][:, 0:2], axis=0) * [cos_dec, 1.0] * 3600.
+        pos_std  = numpy.std(valid_matches[:, 0:2], axis=0) * [cos_dec, 1.0] * 3600.
         # print pos_std * 3600
+        valid_photid = valid_matches[:,2].astype(numpy.int)
 
 
         #
