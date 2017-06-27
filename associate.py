@@ -70,7 +70,7 @@ if __name__ == "__main__":
         cos_dec = numpy.cos(numpy.radians(dec))
         d_ra = matching_radius_deg / cos_dec
         associated_sql = """\
-        SELECT alpha_j2000, delta_j2000, photid
+        SELECT alpha_j2000, delta_j2000, photid, frameid,
         FROM photometry
         WHERE sourceid IS NULL
         AND alpha_j2000 BETWEEN %(minra)f AND %(maxra)f
@@ -98,17 +98,54 @@ if __name__ == "__main__":
         valid = fine_d < matching_radius_deg
         valid_photid = matches[:,2][valid].astype(numpy.int)
 
+        #
+        # Now make sure we only have a single source per frame
+        #
+        valid_matches = numpy.append(
+            matches[valid],
+            fine_d[valid].reshape((-1,1)),
+            axis=1)
+        unique_frameids = set(valid_matches[:,3])
+        if (len(unique_frameids) == valid_matches.shape[0]):
+            # nothing to do, all frame-ids are unique
+            pass
+        else:
+            # at least some of the matches are duplicate matches with two
+            # counterparts from a single frame
+            for u_frameid in unique_frameids:
+                from_this_frame = (valid_matches[:,3] == u_frameid)
+                this_frame = valid_matches[from_this_frame]
+                if (numpy.sum(from_this_frame) > 1):
+                    # this frame has duplicate identifications
+                    # find the closest match
+                    min_d = numpy.min(this_frame[:,4])
+                    # and mark all other solutions as invalid
+                    this_frame[:,4][this_frame[:,4] > min_d] = numpy.NaN
+
+            # now eliminate all matches with distance marked as invalid (set
+            #  to NaN)
+            n_before = valid_matches.shape[0]
+            valid_matches = valid_matches[numpy.isfinite(valid_matches[:,4])]
+            print "Eliminated %d duplicates: %d --> %d" % (
+                n_before-valid_matches.shape[0], n_before,
+                valid_matches.shape[0])
+
         # print valid_photid
         mean_pos = numpy.mean(matches[valid][:, 0:2], axis=0)
         # print mean_pos
         pos_std  = numpy.std(matches[valid][:, 0:2], axis=0) * [cos_dec, 1.0] * 3600.
         # print pos_std * 3600
 
+
         #
         # create new entry in the source table
         #
         times.append(time.time())
-        new_sourceid_sql = "INSERT INTO sources (ra, dec, rms_ra, rms_dec, nphot) VALUES (?,?,?,?,?)"
+        new_sourceid_sql = """\
+        INSERT
+        INTO sources (ra, dec, rms_ra, rms_dec, nphot)
+        VALUES (?,?,?,?,?)"""
+
         curs.execute(new_sourceid_sql, (
             mean_pos[0], mean_pos[1], pos_std[0], pos_std[1], valid_photid.shape[0]))
         times.append(time.time())
