@@ -167,7 +167,7 @@ if __name__ == "__main__":
         #
         # Now ingest all source photometry
         #
-        sqllog = open(fn[:-5]+".sql", "w")
+        # sqllog = open(fn[:-5]+".sql", "w")
         # print "begin transaction"
         #sql = 'BEGIN TRANSACTION;'
         #curs.execute(sql)
@@ -183,7 +183,7 @@ if __name__ == "__main__":
             )
             curs.execute(sql.strip())
             #print sql
-            print >>sqllog, sql.strip()
+            # print >>sqllog, sql.strip()
 
         conn.commit()
 
