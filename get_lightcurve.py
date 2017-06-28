@@ -101,10 +101,13 @@ def get_lightcurve(
 
         # find the column numbers for all magnitude columns
         mag_columns = []
+        magerr_columns = []
         for i,n in enumerate(column_list):
             # print n
             if (n.startswith("photometry.mag_")):
                 mag_columns.append(i)
+            if (n.startswith("photometry.magerr_")):
+                magerr_columns.append(i)
 
         #
         # get coordinates from source-id
@@ -145,12 +148,15 @@ def get_lightcurve(
         ref_stars = ref_star_sorted[:diffphot_number]
         print "#", ref_stars
         ref_star_sourceids = ref_stars[:,0].astype(numpy.int)
+        #ref_star_sourceids = [105, 107]
 
         #
         # query the light-curves for these sources
         #
         all_corrections = []
+        all_corrections_error = []
         source_mags = results[:, mag_columns]
+        numpy.savetxt("diffphot_test.src", source_mags)
         for ref_source_id in ref_star_sourceids:
             print "# getting lightcurve for reference source %d" % (ref_source_id)
             res = get_lightcurve(
@@ -170,6 +176,8 @@ def get_lightcurve(
             # lightcurve
             matched_lightcurve = numpy.empty((results.shape[0], len(mag_columns)))
             matched_lightcurve[:,:] = numpy.NaN
+            matched_lightcurve_err = numpy.empty((results.shape[0], len(magerr_columns)))
+            matched_lightcurve_err[:,:] = numpy.NaN
 
             # print "matched LC", matched_lightcurve.shape
             for iframe, frameid in enumerate(results[:,3]):
@@ -184,8 +192,11 @@ def get_lightcurve(
                     continue
 
                 matched_lightcurve[iframe, :] = ref_lightcurve[_framematch, mag_columns]
+                matched_lightcurve_err[iframe, :] = ref_lightcurve[_framematch, magerr_columns]
+
             numpy.savetxt("matched_lc.%d" % (ref_source_id), matched_lightcurve)
             all_corrections.append(matched_lightcurve)
+            all_corrections_error.append(matched_lightcurve_err)
 
                 #print _framematch, frameid, ref_lightcurve[_framematch,3
 
@@ -193,21 +204,40 @@ def get_lightcurve(
         # calculate the reference star correction
         #
         all_corrections = numpy.array(all_corrections)
+        all_corrections_error = numpy.array(all_corrections_error)
+
         print "#", all_corrections.shape
 
         diffphot = all_corrections - source_mags
+        with open("diffphot.cat", "w") as x:
+            for i in range(diffphot.shape[0]):
+                numpy.savetxt(x, diffphot[i,:,:])
+                print >>x, "\n"*10
+        # numpy.savetxt("diffphot.cat", diffphot[0, :, :])
 
         median_flux_correction = numpy.nanmedian(diffphot, axis=1)
         print "#", median_flux_correction.shape
 
         diffphot -= median_flux_correction.reshape((median_flux_correction.shape[0], 1, median_flux_correction.shape[1]))
+        with open("diffphot.cat2", "w") as x:
+            for i in range(diffphot.shape[0]):
+                numpy.savetxt(x, diffphot[i,:,:])
+                print >>x, "\n"*10
+        # numpy.savetxt("diffphot.cat2", diffphot[0,:,:])
         print "#", diffphot.shape
 
         # now combine all measurements
-        final_correction = numpy.median(diffphot, axis=0)
+        final_correction = numpy.nanmedian(diffphot, axis=0)
         print "#", final_correction.shape
+        numpy.savetxt("diffphot.cat3", final_correction)
 
-        differential_photometry_correction = final_correction
+        all_corrections_error = numpy.hypot(all_corrections_error, 0.001)
+        #all_corrections_error[~numpy.isfinite(all_corrections_error)] = 1e6
+        fc2 = numpy.nansum(diffphot/all_corrections_error, axis=0) / \
+            numpy.nansum(1./all_corrections_error, axis=0)
+        numpy.savetxt("diffphot.catx", fc2)
+
+        differential_photometry_correction = fc2 #final_correction
 
 
     return results, sql, column_list, differential_photometry_correction
