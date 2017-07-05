@@ -55,7 +55,7 @@ if __name__ == "__main__":
             print "nothing found"
             continue
 
-        lightcurve, sqlquery, query_columns = result
+        lightcurve, sqlquery, query_columns, diffphot = result
         #print lightcurve
 
         magnitudes = lightcurve[:,8]
