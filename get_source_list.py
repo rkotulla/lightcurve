@@ -23,6 +23,8 @@ if __name__ == "__main__":
         help='database filename')
     parser.add_argument('--nmin', dest='n_min_phot', type=int,
                         default=1, help='minimum number of photometry datapoints')
+    parser.add_argument('--nmax', dest='n_max_phot', type=int,
+                        default=-1, help='maximum number of photometry datapoints')
     parser.add_argument('--out', dest='output', type=str,
                         default=sys.stdout, help='output filename')
     args = parser.parse_args()
@@ -38,6 +40,9 @@ if __name__ == "__main__":
     SELECT * 
     FROM sources
     WHERE nphot >= %d""" % (args.n_min_phot)
+
+    if (args.n_max_phot > args.n_min_phot and args.n_max_phot > 0):
+        sql += " AND nphot <= %d" % (args.n_max_phot)
 
     print sql
     query = curs.execute(sql)
