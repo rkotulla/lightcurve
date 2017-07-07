@@ -4,6 +4,7 @@ import os
 import sys
 import pyfits
 import numpy
+import scipy.stats
 
 import subprocess
 import sqlite3
@@ -26,6 +27,8 @@ if __name__ == "__main__":
     start_at = int(sys.argv[4])
     end_at = int(sys.argv[5])
 
+    output_file = sys.argv[6]
+
     #print database_file, sex_param_file
 
 
@@ -43,7 +46,11 @@ if __name__ == "__main__":
 
     print "all ready to go"
 
-    for sourceid in results[start_at:end_at+1]:
+    source_stats = []
+    for i, sourceid in enumerate(results[start_at:end_at+1]):
+
+        sys.stdout.write("\rComputing stats for source %d of %d" % (i, end_at-start_at+1))
+        sys.stdout.flush()
 
         result = get_lightcurve(
             database=db,
@@ -60,17 +67,32 @@ if __name__ == "__main__":
 
         magnitudes = lightcurve[:,8]
         errors = lightcurve[:,12]
-        print magnitudes
+        # print magnitudes
 
 
         mean_mag = numpy.mean(magnitudes)
         median_mag = numpy.median(magnitudes)
         mean_error = numpy.mean(errors)
+        median_error = numpy.median(errors)
 
         max_mag = numpy.max(magnitudes)
         min_mag = numpy.min(magnitudes)
 
-        if ((max_mag-min_mag) > 3*mean_error):
-            print "interesting"
-        else:
-            print "boring"
+        kurtosis = scipy.stats.kurtosis(magnitudes)
+        skewness = scipy.stats.skew(magnitudes)
+
+        sigmas = numpy.percentile(magnitudes, [16,84,2.5,97.5])
+        source_stats.append(
+            [sourceid, mean_mag, median_mag, mean_error, max_mag, min_mag, skewness, kurtosis,
+             sigmas[0], sigmas[1], sigmas[2], sigmas[3], median_error]
+        )
+
+    source_stats = numpy.array(source_stats)
+
+    numpy.savetxt(output_file, source_stats)
+
+
+    # if ((max_mag-min_mag) > 3*mean_error):
+    #     print "interesting"
+    # else:
+    #     print "boring"
