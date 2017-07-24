@@ -65,8 +65,8 @@ if __name__ == "__main__":
         lightcurve, sqlquery, query_columns, diffphot = result
         #print lightcurve
 
-        magnitudes = lightcurve[:,8]
-        errors = lightcurve[:,12]
+        magnitudes = lightcurve[:,14]
+        errors = lightcurve[:,18]
         # print magnitudes
 
 
@@ -81,10 +81,28 @@ if __name__ == "__main__":
         kurtosis = scipy.stats.kurtosis(magnitudes)
         skewness = scipy.stats.skew(magnitudes)
 
+        #valid = numpy.zeros(magnitudes.shape, dtype=bool)
+        valid = (magnitudes > 10) & (magnitudes < 30)
+        _median, _sigma = -1, -1
+        for i in range(3):
+            if (numpy.sum(valid) <= 1):
+                break
+            _s = numpy.percentile(magnitudes[valid], [16,84,50])
+            _median = _s[2]
+            _sigma = 0.5*(_s[1]-_s[0])
+            _min = _median - 3*_sigma
+            _max = _median + 3*_sigma
+            bad = (magnitudes > _max) | (magnitudes < _min)
+            valid[bad] = False
+
         sigmas = numpy.percentile(magnitudes, [16,84,2.5,97.5])
         source_stats.append(
             [sourceid, mean_mag, median_mag, mean_error, max_mag, min_mag, skewness, kurtosis,
-             sigmas[0], sigmas[1], sigmas[2], sigmas[3], median_error]
+             sigmas[0], sigmas[1], sigmas[2], sigmas[3], median_error,
+             numpy.median(errors[valid]),
+             numpy.mean(errors[valid]),
+             _median, _sigma,
+         ]
         )
 
     source_stats = numpy.array(source_stats)
