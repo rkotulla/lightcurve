@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 continue
 
             keyname = line.split(" ")[0].split("(")[0]
-            print keyname
+            print(keyname)
 
             if (keyname in [
                 'MAG_APER', 'MAGERR_APER',
@@ -94,7 +94,7 @@ if __name__ == "__main__":
                 n_repeat = int(line.split("(")[1].split(")")[0])
                 keys2add = ["%s_%d" % (keyname, i+1) for i in range(
                     n_repeat)]
-                print keys2add
+                print(keys2add)
 
             else:
                 keys2add = [keyname]
@@ -115,7 +115,7 @@ sourceid INTEGER,
 %s
 );
 ''' % (columns)
-    print sql
+    print(sql)
     curs.execute(sql)
     conn.commit()
 

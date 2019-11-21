@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
-import pyfits
+import astropy.io.fits as pyfits
 import numpy
 
 import subprocess
@@ -125,12 +125,18 @@ if __name__ == "__main__":
 
         catalog_fn = os.path.splitext(fn)[0]+".xcat"
 
+        try:
+            hdulist = pyfits.open(fn)
+        except IOError:
+            print("Something is wrong with file %s" % (fn))
+            continue
+
         # run seource extractor
         if (not os.path.isfile(catalog_fn)):
             cmd = "sex -c %s -PARAMETERS_NAME %s -CATALOG_NAME %s %s" % (
                 args.sex_conf_fn, args.sex_param_fn, catalog_fn, fn
             )
-            print cmd
+            print(cmd)
             os.system(cmd)
 
         # read catalog data
@@ -140,7 +146,6 @@ if __name__ == "__main__":
         conn = sqlite3.connect(args.database_fn)
         curs = conn.cursor()
 
-        hdulist = pyfits.open(fn)
         hdr = hdulist[0].header
         frameid = ingest_frame(
             db_connection=conn,

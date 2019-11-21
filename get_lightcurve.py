@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -36,7 +36,7 @@ def get_lightcurve(
         dec_min = dec - match_radius / 3600.
         dec_max = dec + match_radius / 3600.
         cos_dec = numpy.cos(numpy.radians(dec))
-        print cos_dec
+        print(cos_dec)
         ra_min = ra - match_radius / cos_dec / 3600.
         ra_max = ra + match_radius / cos_dec / 3600.
         sql = """\
@@ -50,7 +50,7 @@ def get_lightcurve(
         # print " ".join(sql.split())
         query = curs.execute(sql)
         results = numpy.array(query.fetchmany(size=100))
-        print results
+        print(results)
 
         if (results.shape[0] <= 0):
             # no results received
@@ -115,9 +115,9 @@ def get_lightcurve(
         sql = "SELECT ra,dec FROM sources WHERE sourceid = %d" % (sourceid)
         query = curs.execute(sql)
         ra_dec =  query.fetchone()
-        print "#", ra_dec
+        print("#", ra_dec)
         ra, dec = ra_dec
-        print "#", ra, dec
+        print("#", ra, dec)
 
 
         #
@@ -134,7 +134,7 @@ def get_lightcurve(
         # print sql
         query = curs.execute(sql)
         ref_star_candidates = numpy.array(query.fetchmany(size=5000))
-        print "#", ref_star_candidates.shape
+        print("#", ref_star_candidates.shape)
 
         #
         # compute distances and decide what source-ids to use as reference
@@ -146,9 +146,9 @@ def get_lightcurve(
         si = numpy.argsort(distance)
         ref_star_sorted = ref_star_candidates[si]
         ref_stars = ref_star_sorted[:diffphot_number]
-        print "#", ref_stars
+        print("#", ref_stars)
         ref_star_sourceids = ref_stars[:,0].astype(numpy.int)
-        #ref_star_sourceids = [105, 107]
+        ref_star_sourceids = [2112] #105, 107]
 
         #
         # query the light-curves for these sources
@@ -158,7 +158,7 @@ def get_lightcurve(
         source_mags = results[:, mag_columns]
         numpy.savetxt("diffphot_test.src", source_mags)
         for ref_source_id in ref_star_sourceids:
-            print "# getting lightcurve for reference source %d" % (ref_source_id)
+            print("# getting lightcurve for reference source %d" % (ref_source_id))
             res = get_lightcurve(
                 database,
                 sourceid=ref_source_id,
@@ -206,29 +206,29 @@ def get_lightcurve(
         all_corrections = numpy.array(all_corrections)
         all_corrections_error = numpy.array(all_corrections_error)
 
-        print "#", all_corrections.shape
+        print("#", all_corrections.shape)
 
         diffphot = all_corrections - source_mags
         with open("diffphot.cat", "w") as x:
             for i in range(diffphot.shape[0]):
                 numpy.savetxt(x, diffphot[i,:,:])
-                print >>x, "\n"*10
+                print("\n"*10, file=x)
         # numpy.savetxt("diffphot.cat", diffphot[0, :, :])
 
         median_flux_correction = numpy.nanmedian(diffphot, axis=1)
-        print "#", median_flux_correction.shape
+        print("#", median_flux_correction.shape)
 
         diffphot -= median_flux_correction.reshape((median_flux_correction.shape[0], 1, median_flux_correction.shape[1]))
         with open("diffphot.cat2", "w") as x:
             for i in range(diffphot.shape[0]):
                 numpy.savetxt(x, diffphot[i,:,:])
-                print >>x, "\n"*10
+                print("\n"*10, file=x)
         # numpy.savetxt("diffphot.cat2", diffphot[0,:,:])
-        print "#", diffphot.shape
+        print("#", diffphot.shape)
 
         # now combine all measurements
         final_correction = numpy.nanmedian(diffphot, axis=0)
-        print "#", final_correction.shape
+        print("#", final_correction.shape)
         numpy.savetxt("diffphot.cat3", final_correction)
 
         all_corrections_error = numpy.hypot(all_corrections_error, 0.001)
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         diffphot_number=args.diff_phot_n,
     )
     if (result is None):
-        print "nothing found"
+        print("nothing found")
         sys.exit(0)
 
     lightcurve, sqlquery, query_columns, diffphotcorr = result
