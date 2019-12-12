@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -39,13 +39,13 @@ if __name__ == "__main__":
     #curs.arraysize = 250
 
     # create index
-    print "creating index"
+    print("creating index")
     sql = "CREATE INDEX coords ON photometry (alpha_j2000, delta_j2000)"
     try:
         curs.execute(sql)
     except sqlite3.OperationalError:
         pass
-    print "done with index"
+    print("done with index")
 
     counter=0
     while (True):
@@ -151,9 +151,9 @@ if __name__ == "__main__":
             #  to NaN)
             n_before = valid_matches.shape[0]
             valid_matches = valid_matches[numpy.isfinite(valid_matches[:,4])]
-            print "Eliminated %d duplicates: %d --> %d" % (
+            print("Eliminated %d duplicates: %d --> %d" % (
                 n_before-valid_matches.shape[0], n_before,
-                valid_matches.shape[0])
+                valid_matches.shape[0]))
 
             # numpy.savetxt("validmatches_after.%d" % (counter), valid_matches)
 
@@ -185,10 +185,11 @@ if __name__ == "__main__":
         # print source_id
         times.append(time.time())
 
-        print "Found %3d sources at %8.5f %+8.5f +/- %5.3f %5.3f ==> %5d" % (
+        print("Found %3d sources at %8.5f %+8.5f +/- %5.3f %5.3f ==> %5d" % (
             valid_photid.shape[0], mean_pos[0], mean_pos[1],
             pos_std[0], pos_std[1],
             source_id
+            )
         )
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     if (args.n_max_phot > args.n_min_phot and args.n_max_phot > 0):
         sql += " AND nphot <= %d" % (args.n_max_phot)
 
-    print sql
+    print(sql)
     query = curs.execute(sql)
 
     all_results = []
@@ -57,10 +57,10 @@ if __name__ == "__main__":
         all_results.extend(results)
 
     all_results = numpy.array(all_results)
-    print all_results.shape
+    print(all_results.shape)
 
     with open(args.output, "w") as f:
-        print >>f, "id ra dec rms_ra rms_dec nphot"
+        print("id ra dec rms_ra rms_dec nphot", file=f)
         numpy.savetxt(f, all_results)
 
     # numpy.savetxt(args.output, all_results)

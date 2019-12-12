@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         pass
 
     if (coord_select):
-        print ra, dec
+        print(ra, dec)
 
         region_select = """\
         WHERE photometry.alpha_j2000 >= %f
@@ -42,12 +42,12 @@ JOIN frames
 ON frames.frameid = photometry.frameid
 %s LIMIT 10
 """ % (region_select)
-    print sql
+    print(sql)
 
     conn = sqlite3.connect(db_file)
     curs = conn.cursor()
     query = curs.execute(sql)
-    print query
+    print(query)
     results = query.fetchall()
 
-    print results
+    print(results)
