@@ -71,6 +71,7 @@ if __name__ == "__main__":
         ids = [int(p) for p in pairs.split(",")]
         # print(p1,p2)
 
+        lightcurves = {}
         for i,fn in enumerate(filters):
             print("Reading data for ID %d, filter %s" % (ids[i], fn))
             result = get_lightcurve(
@@ -79,6 +80,46 @@ if __name__ == "__main__":
                 sextractor_columns=columns,
                 calibrate=True,
             )
+            lightcurve, sqlquery, query_columns, diffphot = result
+            lightcurves[fn] = lightcurve
+            print(lightcurve.shape)
+
+        #
+        #  Now we have a set of lightcurves in different bands,
+        #  next up we'll combine data points for similar timestamps
+        #
+
+        n_cols = 0
+        columns = []
+        for f in filters:
+            start_at = n_cols
+            n_cols += lightcurves[f].shape[1]
+            end_at = n_cols
+            columns.append((start_at, end_at))
+
+        lc1 = lightcurves[filters[0]]
+        combined_lightcurve = numpy.empty((lc1.shape[0], n_cols))
+        combined_lightcurve[:,:] = numpy.NaN
+        combined_lightcurve[:, 0:lc1.shape[1]] = lc1
+        print(combined_lightcurve.shape)
+
+        for itime, timestamp in enumerate(combined_lightcurve[:,0]):
+            # print(timestamp)
+
+            for i,f in enumerate(filters[1:]):
+                d_time = numpy.fabs(lightcurves[f][:,0] - timestamp)
+                # print(d_time)
+                closest_time = numpy.argmin(d_time)
+                # print(i, timestamp, d_time[closest_time])
+                # if (d_time[closest_time] > 3600):
+                #     # if time-stamps are off by more than an hour, don't consider this a valid match
+                #     continue
+
+                c1,c2 = columns[i+1]
+                combined_lightcurve[itime, c1:c2] = lightcurves[f][closest_time,:]
+
+        # save the combined lightcurve
+        numpy.savetxt("combined_%s.txt" % (pairs), combined_lightcurve)
 
     print("all done!")
 
