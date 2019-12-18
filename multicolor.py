@@ -54,8 +54,8 @@ if __name__ == "__main__":
         filters.append('i')
         db_files['i'] = args.db_i
 
-    params = read_colunms_from_param_file(args.sex_param_fn)
-    columns = [p.lower() for p in params]
+    columns = read_colunms_from_param_file(args.sex_param_fn)
+    # columns = [p.lower() for p in params]
 
     dbs = {}
     curs = {}
